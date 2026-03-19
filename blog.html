@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>みんなの掲示板 — スマブランド</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            font-size: 18px;
+            background: url('S__39075932.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: #fff;
+            text-shadow: 2px 2px 4px #000;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 30px 0;
+        }
+
+        .container {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 800px;
+            width: 90%;
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        h3 {
+            font-size: 1.2em;
+            margin: 0 0 8px 0;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: hsl(66, 100%, 50%);
+            text-decoration: none;
+            font-size: 1em;
+            text-shadow: 1px 1px 3px #000;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Post form */
+        .post-form {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.95em;
+            text-shadow: 1px 1px 3px #000;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            font-size: 1em;
+            font-family: Arial, sans-serif;
+            text-shadow: none;
+            outline: none;
+            resize: vertical;
+        }
+
+        input[type="text"]::placeholder,
+        textarea::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            border-color: hsl(66, 100%, 50%);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        textarea {
+            min-height: 100px;
+        }
+
+        .btn {
+            display: inline-block;
+            background: hsl(66, 100%, 50%);
+            color: #000;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            font-family: Arial, sans-serif;
+            cursor: pointer;
+            text-decoration: none;
+            text-shadow: none;
+            transition: background 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+            color: #fff;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Post list */
+        #posts-list {
+            margin-top: 20px;
+        }
+
+        .post-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .post-meta {
+            font-size: 0.85em;
+            color: rgba(255, 255, 255, 0.7);
+            text-shadow: 1px 1px 2px #000;
+            margin-bottom: 10px;
+        }
+
+        .post-content {
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 1em;
+            margin-bottom: 16px;
+        }
+
+        /* Comments */
+        .comments-section {
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            padding-top: 14px;
+            margin-top: 10px;
+        }
+
+        .comments-section h3 {
+            font-size: 1em;
+            color: rgba(255, 255, 255, 0.85);
+            margin-bottom: 10px;
+        }
+
+        .comment-item {
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 5px;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+        }
+
+        .comment-meta {
+            font-size: 0.8em;
+            color: rgba(255, 255, 255, 0.6);
+            text-shadow: 1px 1px 2px #000;
+            margin-bottom: 5px;
+        }
+
+        .comment-content {
+            font-size: 0.95em;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .comment-form {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .comment-form-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .comment-form-row input[type="text"] {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .comment-form textarea {
+            min-height: 60px;
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 0.9em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .error-msg {
+            background: rgba(200, 0, 0, 0.4);
+            border-radius: 5px;
+            padding: 12px;
+            margin-bottom: 16px;
+            font-size: 0.95em;
+        }
+
+        .no-posts {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            padding: 30px 0;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                font-size: 16px;
+                padding: 16px 0;
+            }
+
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.6em;
+            }
+
+            .btn {
+                font-size: 0.95em;
+                padding: 10px 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← トップページに戻る</a>
+        <h1>📝 みんなの掲示板</h1>
+
+        <div id="error-banner" class="error-msg" style="display:none;"></div>
+
+        <!-- New post form -->
+        <div class="post-form">
+            <h2>新しい投稿</h2>
+            <div class="form-group">
+                <label for="post-nickname">ニックネーム</label>
+                <input type="text" id="post-nickname" placeholder="名前を入力" maxlength="50">
+            </div>
+            <div class="form-group">
+                <label for="post-title">タイトル</label>
+                <input type="text" id="post-title" placeholder="タイトルを入力" maxlength="100">
+            </div>
+            <div class="form-group">
+                <label for="post-content">本文</label>
+                <textarea id="post-content" placeholder="内容を入力" maxlength="2000"></textarea>
+            </div>
+            <button class="btn" id="submit-post">投稿する</button>
+        </div>
+
+        <!-- Posts list -->
+        <h2>投稿一覧</h2>
+        <div id="posts-list">
+            <div class="loading">読み込み中...</div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK (compat v9) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // ============================================================
+        // Firebase 設定 — 以下のプレースホルダーをご自身のプロジェクトの
+        // 設定値に置き換えてください。
+        // Firebase Console > プロジェクト設定 > マイアプリ から取得できます。
+        // ============================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAvR5kidURyZH-dPtnM0QhiOum6CIQMj-4",
+            authDomain: "smabland-blog.firebaseapp.com",
+            projectId: "smabland-blog",
+            storageBucket: "smabland-blog.firebasestorage.app",
+            messagingSenderId: "622100057417",
+            appId: "1:622100057417:web:3dc0ad6e8ff7673077de98"
+        };
+        // ============================================================
+
+        // --- Utility: HTML escape for XSS prevention ---
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // --- Utility: format Firestore Timestamp or Date to Japanese locale ---
+        function formatDate(value) {
+            let date;
+            if (value && typeof value.toDate === 'function') {
+                date = value.toDate();
+            } else if (value instanceof Date) {
+                date = value;
+            } else {
+                return '';
+            }
+            return date.toLocaleString('ja-JP', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // --- Show error banner ---
+        function showError(msg) {
+            const banner = document.getElementById('error-banner');
+            banner.textContent = msg;
+            banner.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error-banner').style.display = 'none';
+        }
+
+        // --- Detect placeholder config values ---
+        function isPlaceholderConfig(cfg) {
+            return cfg.apiKey === 'YOUR_API_KEY' ||
+                   cfg.projectId === 'YOUR_PROJECT_ID' ||
+                   cfg.appId === 'YOUR_APP_ID';
+        }
+
+        // --- Initialize Firebase ---
+        let db;
+        if (isPlaceholderConfig(firebaseConfig)) {
+            showError(
+                'Firebase の設定値がプレースホルダーのままです。' +
+                'blog.html 内の firebaseConfig を実際のプロジェクト設定値に置き換えてください。' +
+                '（README.md に手順が記載されています）'
+            );
+            document.getElementById('posts-list').innerHTML =
+                '<div class="no-posts">Firebase が設定されていないため投稿を表示できません。</div>';
+        } else {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+            } catch (e) {
+                showError('Firebase の初期化に失敗しました。firebaseConfig の設定値を確認してください。');
+                document.getElementById('posts-list').innerHTML =
+                    '<div class="no-posts">Firebase が設定されていないため投稿を表示できません。</div>';
+            }
+        }
+
+        // --- Build a single comment element ---
+        function buildCommentEl(data) {
+            const div = document.createElement('div');
+            div.className = 'comment-item';
+            div.innerHTML =
+                '<div class="comment-meta">' +
+                    escapeHtml(data.nickname || '名無し') +
+                    ' &nbsp;|&nbsp; ' +
+                    escapeHtml(formatDate(data.createdAt)) +
+                '</div>' +
+                '<div class="comment-content">' + escapeHtml(data.content) + '</div>';
+            return div;
+        }
+
+        // --- Build a single post element ---
+        function buildPostEl(postId, postData) {
+            const article = document.createElement('article');
+            article.className = 'post-card';
+            article.id = 'post-' + postId;
+
+            article.innerHTML =
+                '<h3>' + escapeHtml(postData.title || '(タイトルなし)') + '</h3>' +
+                '<div class="post-meta">' +
+                    escapeHtml(postData.nickname || '名無し') +
+                    ' &nbsp;|&nbsp; ' +
+                    escapeHtml(formatDate(postData.createdAt)) +
+                '</div>' +
+                '<div class="post-content">' + escapeHtml(postData.content || '') + '</div>' +
+                '<div class="comments-section">' +
+                    '<h3>💬 コメント</h3>' +
+                    '<div class="comments-list" id="comments-' + postId + '"></div>' +
+                    '<div class="comment-form">' +
+                        '<div class="comment-form-row">' +
+                            '<input type="text" class="comment-nickname" placeholder="ニックネーム" maxlength="50">' +
+                        '</div>' +
+                        '<textarea class="comment-content-input" placeholder="コメントを入力" maxlength="1000"></textarea>' +
+                        '<div>' +
+                            '<button class="btn btn-sm comment-submit" data-post-id="' + escapeHtml(postId) + '">コメントする</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+
+            // Attach comment submit handler
+            const submitBtn = article.querySelector('.comment-submit');
+            submitBtn.addEventListener('click', function () {
+                submitComment(postId, article);
+            });
+
+            return article;
+        }
+
+        // --- Load comments for a post ---
+        function loadComments(postId) {
+            if (!db) return;
+            db.collection('posts').doc(postId)
+                .collection('comments')
+                .orderBy('createdAt', 'asc')
+                .onSnapshot(function (snapshot) {
+                    const list = document.getElementById('comments-' + postId);
+                    if (!list) return;
+                    list.innerHTML = '';
+                    if (snapshot.empty) {
+                        list.innerHTML = '<div style="font-size:0.85em;color:rgba(255,255,255,0.5);">まだコメントはありません。</div>';
+                        return;
+                    }
+                    snapshot.forEach(function (doc) {
+                        list.appendChild(buildCommentEl(doc.data()));
+                    });
+                }, function (err) {
+                    console.error('コメントの読み込みエラー:', err);
+                });
+        }
+
+        // --- Submit a new comment ---
+        function submitComment(postId, article) {
+            if (!db) return;
+            const nicknameEl = article.querySelector('.comment-nickname');
+            const contentEl = article.querySelector('.comment-content-input');
+            const btn = article.querySelector('.comment-submit');
+
+            const nickname = nicknameEl.value.trim();
+            const content = contentEl.value.trim();
+
+            if (!content) {
+                alert('コメント本文を入力してください。');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '送信中...';
+
+            db.collection('posts').doc(postId).collection('comments').add({
+                nickname: nickname || '名無し',
+                content: content,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(function () {
+                nicknameEl.value = '';
+                contentEl.value = '';
+                hideError();
+            }).catch(function (err) {
+                console.error('コメント投稿エラー:', err);
+                showError('コメントの投稿に失敗しました: ' + err.message);
+            }).finally(function () {
+                btn.disabled = false;
+                btn.textContent = 'コメントする';
+            });
+        }
+
+        // --- Load all posts (realtime) ---
+        function loadPosts() {
+            if (!db) return;
+            const postsList = document.getElementById('posts-list');
+
+            db.collection('posts')
+                .orderBy('createdAt', 'desc')
+                .onSnapshot(function (snapshot) {
+                    postsList.innerHTML = '';
+                    if (snapshot.empty) {
+                        postsList.innerHTML = '<div class="no-posts">まだ投稿がありません。最初の投稿をしてみましょう！</div>';
+                        return;
+                    }
+                    snapshot.forEach(function (doc) {
+                        const el = buildPostEl(doc.id, doc.data());
+                        postsList.appendChild(el);
+                        loadComments(doc.id);
+                    });
+                }, function (err) {
+                    console.error('投稿の読み込みエラー:', err);
+                    showError('投稿の読み込みに失敗しました: ' + err.message);
+                    postsList.innerHTML = '<div class="no-posts">投稿を読み込めませんでした。</div>';
+                });
+        }
+
+        // --- Submit a new post ---
+        document.getElementById('submit-post').addEventListener('click', function () {
+            if (!db) {
+                showError('Firebase が設定されていません。firebaseConfig を確認してください。');
+                return;
+            }
+            const nickname = document.getElementById('post-nickname').value.trim();
+            const title = document.getElementById('post-title').value.trim();
+            const content = document.getElementById('post-content').value.trim();
+
+            if (!title) {
+                alert('タイトルを入力してください。');
+                return;
+            }
+            if (!content) {
+                alert('本文を入力してください。');
+                return;
+            }
+
+            const btn = document.getElementById('submit-post');
+            btn.disabled = true;
+            btn.textContent = '投稿中...';
+
+            db.collection('posts').add({
+                nickname: nickname || '名無し',
+                title: title,
+                content: content,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(function () {
+                document.getElementById('post-nickname').value = '';
+                document.getElementById('post-title').value = '';
+                document.getElementById('post-content').value = '';
+                hideError();
+            }).catch(function (err) {
+                console.error('投稿エラー:', err);
+                showError('投稿に失敗しました: ' + err.message);
+            }).finally(function () {
+                btn.disabled = false;
+                btn.textContent = '投稿する';
+            });
+        });
+
+        // --- Start loading posts ---
+        if (db) {
+            loadPosts();
+        }
+    </script>
+</body>
+</html>
