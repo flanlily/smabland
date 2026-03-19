@@ -243,6 +243,141 @@
             padding: 30px 0;
         }
 
+        /* File attachment */
+        .file-input-label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.95em;
+            text-shadow: 1px 1px 3px #000;
+        }
+
+        .file-hint {
+            font-size: 0.8em;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 4px;
+            text-shadow: none;
+        }
+
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            font-size: 0.9em;
+            color: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            padding: 8px;
+            cursor: pointer;
+            text-shadow: none;
+        }
+
+        input[type="file"]:focus {
+            border-color: hsl(66, 100%, 50%);
+            outline: none;
+        }
+
+        .file-preview {
+            margin-top: 8px;
+        }
+
+        .file-preview img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 5px;
+            display: block;
+        }
+
+        .file-preview .file-info {
+            font-size: 0.85em;
+            color: rgba(255, 255, 255, 0.75);
+            text-shadow: none;
+            padding: 6px 0;
+        }
+
+        .progress-wrap {
+            margin-top: 8px;
+            display: none;
+        }
+
+        .progress-bar-bg {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            height: 8px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: hsl(66, 100%, 50%);
+            transition: width 0.2s ease;
+            border-radius: 4px;
+        }
+
+        .progress-label {
+            font-size: 0.8em;
+            color: rgba(255, 255, 255, 0.65);
+            text-shadow: none;
+            margin-top: 3px;
+        }
+
+        /* Attachment display in posts/comments */
+        .attachment-wrap {
+            margin-top: 10px;
+        }
+
+        .attachment-wrap img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 6px;
+            display: block;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .attachment-wrap img:hover {
+            opacity: 0.85;
+        }
+
+        .attachment-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: hsl(66, 100%, 50%);
+            text-decoration: none;
+            font-size: 0.9em;
+            text-shadow: 1px 1px 2px #000;
+            word-break: break-all;
+        }
+
+        .attachment-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Lightbox */
+        #lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.92);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            cursor: zoom-out;
+        }
+
+        #lightbox.active {
+            display: flex;
+        }
+
+        #lightbox img {
+            max-width: 95vw;
+            max-height: 95vh;
+            border-radius: 6px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+            cursor: default;
+        }
+
         @media (max-width: 768px) {
             body {
                 font-size: 16px;
@@ -260,6 +395,14 @@
             .btn {
                 font-size: 0.95em;
                 padding: 10px 18px;
+            }
+
+            .attachment-wrap img {
+                max-height: 200px;
+            }
+
+            .file-preview img {
+                max-height: 150px;
             }
         }
     </style>
@@ -286,6 +429,16 @@
                 <label for="post-content">本文</label>
                 <textarea id="post-content" placeholder="内容を入力" maxlength="2000"></textarea>
             </div>
+            <div class="form-group">
+                <label class="file-input-label" for="post-file">📎 ファイル添付（画像・PDF等、50MBまで）</label>
+                <input type="file" id="post-file" accept="image/*,.pdf,.txt,.doc,.docx,.xls,.xlsx">
+                <div class="file-hint">対応形式: 画像（JPG / PNG / GIF / WebP）、PDF、テキスト、Word、Excel</div>
+                <div class="file-preview" id="post-file-preview"></div>
+                <div class="progress-wrap" id="post-progress-wrap">
+                    <div class="progress-bar-bg"><div class="progress-bar-fill" id="post-progress-fill"></div></div>
+                    <div class="progress-label" id="post-progress-label">アップロード中...</div>
+                </div>
+            </div>
             <button class="btn" id="submit-post">投稿する</button>
         </div>
 
@@ -296,9 +449,15 @@
         </div>
     </div>
 
+    <!-- Lightbox overlay -->
+    <div id="lightbox" role="dialog" aria-modal="true" aria-label="画像の拡大表示">
+        <img id="lightbox-img" src="" alt="">
+    </div>
+
     <!-- Firebase SDK (compat v9) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
     <script>
         // ============================================================
@@ -365,6 +524,7 @@
 
         // --- Initialize Firebase ---
         let db;
+        let storage;
         if (isPlaceholderConfig(firebaseConfig)) {
             showError(
                 'Firebase の設定値がプレースホルダーのままです。' +
@@ -377,10 +537,133 @@
             try {
                 firebase.initializeApp(firebaseConfig);
                 db = firebase.firestore();
+                storage = firebase.storage();
             } catch (e) {
                 showError('Firebase の初期化に失敗しました。firebaseConfig の設定値を確認してください。');
                 document.getElementById('posts-list').innerHTML =
                     '<div class="no-posts">Firebase が設定されていないため投稿を表示できません。</div>';
+            }
+        }
+
+        // --- Lightbox ---
+        (function () {
+            const lb = document.getElementById('lightbox');
+            const lbImg = document.getElementById('lightbox-img');
+            function closeLightbox() {
+                lb.classList.remove('active');
+                lbImg.src = '';
+            }
+            lb.addEventListener('click', closeLightbox);
+            lbImg.addEventListener('click', function (e) {
+                e.stopPropagation();
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeLightbox();
+            });
+            // Event delegation for lightbox-enabled images
+            document.addEventListener('click', function (e) {
+                if (e.target.matches('img[data-lightbox-src]')) {
+                    lbImg.src = e.target.dataset.lightboxSrc;
+                    lbImg.alt = e.target.dataset.lightboxAlt || '';
+                    lb.classList.add('active');
+                }
+            });
+        }());
+
+        // --- File size constant ---
+        const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+
+        // --- Utility: human-readable file size ---
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        // --- Utility: is the MIME type an image we can display? ---
+        function isImageType(type) {
+            return /^image\/(jpeg|png|gif|webp)$/i.test(type);
+        }
+
+        // --- Utility: sanitize a filename for use in a storage path ---
+        function sanitizeFilename(name) {
+            // Extract basename only (remove any path separators) and replace unsafe chars
+            return name.replace(/[/\\]/g, '_').replace(/[^\w.\- ]/g, '_').slice(0, 200);
+        }
+
+        // --- Wire up file input preview for a given input / preview container ---
+        function initFilePreview(inputEl, previewEl) {
+            inputEl.addEventListener('change', function () {
+                previewEl.innerHTML = '';
+                const file = inputEl.files[0];
+                if (!file) return;
+                if (file.size > MAX_FILE_SIZE) {
+                    previewEl.innerHTML = '<div class="file-info" style="color:#ff6b6b;">ファイルサイズが50MBを超えています（' + formatFileSize(file.size) + '）。</div>';
+                    inputEl.value = '';
+                    return;
+                }
+                if (isImageType(file.type)) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.alt = file.name;
+                        previewEl.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    previewEl.innerHTML = '<div class="file-info">📄 ' + escapeHtml(file.name) + ' (' + formatFileSize(file.size) + ')</div>';
+                }
+            });
+        }
+
+        // --- Upload a file to Firebase Storage and return a Promise<{url,name,type,size}> ---
+        function uploadFile(file, storagePath, progressFill, progressWrap, progressLabel) {
+            return new Promise(function (resolve, reject) {
+                if (!storage) {
+                    reject(new Error('Storage が初期化されていません。'));
+                    return;
+                }
+                const ref = storage.ref(storagePath);
+                const task = ref.put(file);
+                if (progressWrap) progressWrap.style.display = 'block';
+                task.on('state_changed',
+                    function (snapshot) {
+                        const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                        if (progressFill) progressFill.style.width = pct + '%';
+                        if (progressLabel) progressLabel.textContent = 'アップロード中... ' + pct + '%';
+                    },
+                    function (err) {
+                        if (progressWrap) progressWrap.style.display = 'none';
+                        reject(err);
+                    },
+                    function () {
+                        task.snapshot.ref.getDownloadURL().then(function (url) {
+                            if (progressWrap) progressWrap.style.display = 'none';
+                            resolve({ url: url, name: file.name, type: file.type, size: file.size });
+                        }).catch(reject);
+                    }
+                );
+            });
+        }
+
+        // --- Render an attachment inside a post or comment ---
+        function renderAttachment(attachment) {
+            if (!attachment || !attachment.url) return '';
+            const url = escapeHtml(attachment.url);
+            const name = escapeHtml(attachment.name || 'ファイル');
+            const size = attachment.size ? ' (' + formatFileSize(attachment.size) + ')' : '';
+            if (isImageType(attachment.type || '')) {
+                return '<div class="attachment-wrap">' +
+                    '<img src="' + url + '" alt="' + name + '" loading="lazy" ' +
+                    'style="cursor:zoom-in;" data-lightbox-src="' + url + '" data-lightbox-alt="' + name + '">' +
+                    '</div>';
+            } else {
+                return '<div class="attachment-wrap">' +
+                    '<a class="attachment-link" href="' + url + '" target="_blank" rel="noopener noreferrer">' +
+                    '📄 ' + name + size +
+                    '</a>' +
+                    '</div>';
             }
         }
 
@@ -394,7 +677,8 @@
                     ' &nbsp;|&nbsp; ' +
                     escapeHtml(formatDate(data.createdAt)) +
                 '</div>' +
-                '<div class="comment-content">' + escapeHtml(data.content) + '</div>';
+                '<div class="comment-content">' + escapeHtml(data.content) + '</div>' +
+                (data.attachment ? renderAttachment(data.attachment) : '');
             return div;
         }
 
@@ -412,6 +696,7 @@
                     escapeHtml(formatDate(postData.createdAt)) +
                 '</div>' +
                 '<div class="post-content">' + escapeHtml(postData.content || '') + '</div>' +
+                (postData.attachment ? renderAttachment(postData.attachment) : '') +
                 '<div class="comments-section">' +
                     '<h3>💬 コメント</h3>' +
                     '<div class="comments-list" id="comments-' + postId + '"></div>' +
@@ -421,10 +706,25 @@
                         '</div>' +
                         '<textarea class="comment-content-input" placeholder="コメントを入力" maxlength="1000"></textarea>' +
                         '<div>' +
+                            '<label class="file-input-label">📎 ファイル添付（画像・PDF等、50MBまで）</label>' +
+                            '<input type="file" class="comment-file" accept="image/*,.pdf,.txt,.doc,.docx,.xls,.xlsx">' +
+                            '<div class="file-hint">対応形式: 画像（JPG / PNG / GIF / WebP）、PDF、テキスト、Word、Excel</div>' +
+                            '<div class="file-preview comment-file-preview"></div>' +
+                            '<div class="progress-wrap comment-progress-wrap">' +
+                                '<div class="progress-bar-bg"><div class="progress-bar-fill comment-progress-fill"></div></div>' +
+                                '<div class="progress-label comment-progress-label">アップロード中...</div>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div>' +
                             '<button class="btn btn-sm comment-submit" data-post-id="' + escapeHtml(postId) + '">コメントする</button>' +
                         '</div>' +
                     '</div>' +
                 '</div>';
+
+            // Wire up comment file preview
+            const commentFileInput = article.querySelector('.comment-file');
+            const commentFilePreview = article.querySelector('.comment-file-preview');
+            initFilePreview(commentFileInput, commentFilePreview);
 
             // Attach comment submit handler
             const submitBtn = article.querySelector('.comment-submit');
@@ -463,25 +763,50 @@
             const nicknameEl = article.querySelector('.comment-nickname');
             const contentEl = article.querySelector('.comment-content-input');
             const btn = article.querySelector('.comment-submit');
+            const fileInput = article.querySelector('.comment-file');
+            const progressFill = article.querySelector('.comment-progress-fill');
+            const progressWrap = article.querySelector('.comment-progress-wrap');
+            const progressLabel = article.querySelector('.comment-progress-label');
+            const filePreview = article.querySelector('.comment-file-preview');
 
             const nickname = nicknameEl.value.trim();
             const content = contentEl.value.trim();
+            const file = fileInput && fileInput.files[0];
 
             if (!content) {
                 alert('コメント本文を入力してください。');
                 return;
             }
 
+            if (file && file.size > MAX_FILE_SIZE) {
+                alert('ファイルサイズが50MBを超えています。');
+                return;
+            }
+
             btn.disabled = true;
             btn.textContent = '送信中...';
 
-            db.collection('posts').doc(postId).collection('comments').add({
-                nickname: nickname || '名無し',
-                content: content,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            const uploadPromise = file
+                ? uploadFile(
+                    file,
+                    'comments/' + postId + '/' + Date.now() + '_' + sanitizeFilename(file.name),
+                    progressFill, progressWrap, progressLabel
+                  )
+                : Promise.resolve(null);
+
+            uploadPromise.then(function (attachment) {
+                const docData = {
+                    nickname: nickname || '名無し',
+                    content: content,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                if (attachment) docData.attachment = attachment;
+                return db.collection('posts').doc(postId).collection('comments').add(docData);
             }).then(function () {
                 nicknameEl.value = '';
                 contentEl.value = '';
+                if (fileInput) fileInput.value = '';
+                if (filePreview) filePreview.innerHTML = '';
                 hideError();
             }).catch(function (err) {
                 console.error('コメント投稿エラー:', err);
@@ -517,6 +842,12 @@
                 });
         }
 
+        // --- Init post form file preview ---
+        initFilePreview(
+            document.getElementById('post-file'),
+            document.getElementById('post-file-preview')
+        );
+
         // --- Submit a new post ---
         document.getElementById('submit-post').addEventListener('click', function () {
             if (!db) {
@@ -526,6 +857,8 @@
             const nickname = document.getElementById('post-nickname').value.trim();
             const title = document.getElementById('post-title').value.trim();
             const content = document.getElementById('post-content').value.trim();
+            const fileInput = document.getElementById('post-file');
+            const file = fileInput && fileInput.files[0];
 
             if (!title) {
                 alert('タイトルを入力してください。');
@@ -535,20 +868,40 @@
                 alert('本文を入力してください。');
                 return;
             }
+            if (file && file.size > MAX_FILE_SIZE) {
+                alert('ファイルサイズが50MBを超えています。');
+                return;
+            }
 
             const btn = document.getElementById('submit-post');
             btn.disabled = true;
             btn.textContent = '投稿中...';
 
-            db.collection('posts').add({
-                nickname: nickname || '名無し',
-                title: title,
-                content: content,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            const uploadPromise = file
+                ? uploadFile(
+                    file,
+                    'posts/' + Date.now() + '_' + sanitizeFilename(file.name),
+                    document.getElementById('post-progress-fill'),
+                    document.getElementById('post-progress-wrap'),
+                    document.getElementById('post-progress-label')
+                  )
+                : Promise.resolve(null);
+
+            uploadPromise.then(function (attachment) {
+                const docData = {
+                    nickname: nickname || '名無し',
+                    title: title,
+                    content: content,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                if (attachment) docData.attachment = attachment;
+                return db.collection('posts').add(docData);
             }).then(function () {
                 document.getElementById('post-nickname').value = '';
                 document.getElementById('post-title').value = '';
                 document.getElementById('post-content').value = '';
+                fileInput.value = '';
+                document.getElementById('post-file-preview').innerHTML = '';
                 hideError();
             }).catch(function (err) {
                 console.error('投稿エラー:', err);
